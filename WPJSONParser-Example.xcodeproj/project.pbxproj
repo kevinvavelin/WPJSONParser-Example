@@ -12,6 +12,7 @@
 		13092DA819951BB8002BCB58 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 13092DA619951BB8002BCB58 /* Main.storyboard */; };
 		13092DAA19951BB8002BCB58 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13092DA919951BB8002BCB58 /* Images.xcassets */; };
 		13092DB619951BB8002BCB58 /* WPJSONParser_ExampleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13092DB519951BB8002BCB58 /* WPJSONParser_ExampleTests.swift */; };
+		13092DC019951BCC002BCB58 /* WPJSONParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13092DBF19951BCC002BCB58 /* WPJSONParser.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +35,7 @@
 		13092DAF19951BB8002BCB58 /* WPJSONParser-ExampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "WPJSONParser-ExampleTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13092DB419951BB8002BCB58 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		13092DB519951BB8002BCB58 /* WPJSONParser_ExampleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WPJSONParser_ExampleTests.swift; sourceTree = "<group>"; };
+		13092DBF19951BCC002BCB58 /* WPJSONParser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WPJSONParser.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,6 +79,7 @@
 			children = (
 				13092DA219951BB8002BCB58 /* AppDelegate.swift */,
 				13092DA419951BB8002BCB58 /* ViewController.swift */,
+				13092DBF19951BCC002BCB58 /* WPJSONParser.swift */,
 				13092DA619951BB8002BCB58 /* Main.storyboard */,
 				13092DA919951BB8002BCB58 /* Images.xcassets */,
 				13092DA019951BB8002BCB58 /* Supporting Files */,
@@ -208,6 +211,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				13092DC019951BCC002BCB58 /* WPJSONParser.swift in Sources */,
 				13092DA519951BB8002BCB58 /* ViewController.swift in Sources */,
 				13092DA319951BB8002BCB58 /* AppDelegate.swift in Sources */,
 			);
