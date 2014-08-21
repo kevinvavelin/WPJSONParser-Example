@@ -14,7 +14,8 @@ class WPJSONParser: NSObject {
     private var page : Int
     private var categoryPage: Int
     private var urlSite : String
-    var categoryDic : NSDictionary?
+    var categoryDic : NSDictionary? = nil
+    let queryQ : dispatch_queue_t
     
     //MARK: Function
     
@@ -23,7 +24,11 @@ class WPJSONParser: NSObject {
         urlSite = url
         page = 1
         categoryPage = 1
+        queryQ = dispatch_queue_create("QueryQ", DISPATCH_QUEUE_SERIAL)
         super.init()
+        self.getCategory { (response) -> () in
+            self.categoryDic = response
+        }
     }
     
     //Singleton pattern
@@ -41,121 +46,153 @@ class WPJSONParser: NSObject {
     
     func getRecentPost(recentPost:(post:[AnyObject])->()) {
         var url : NSURL = NSURL(string: "http://\(urlSite)/api/get_recent_posts/?count=20")
-        var data : NSData = NSData(contentsOfURL: url)
-        if data != nil {
-            var responseJson: AnyObject! = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: nil)
-            if responseJson != nil {
-                var response : [AnyObject] = responseJson.objectForKey("posts") as [AnyObject]
-                recentPost(post:response)
+        dispatch_async(queryQ, {
+            var data : NSData? = NSData(contentsOfURL: url)
+            if data != nil {
+                var responseJson: AnyObject! = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.AllowFragments, error: nil)
+                if responseJson != nil {
+                    var response : [AnyObject] = responseJson.objectForKey("posts") as [AnyObject]
+                    dispatch_async(dispatch_get_main_queue(), {
+                        recentPost(post:response)
+                    })
+                    
+                }
             }
-        }
+        })
     }
     
     func getCategory(category:(response:NSDictionary)->()) {
         var url : NSURL = NSURL(string: "http://\(urlSite)/api/get_category_index")
-        var data : NSData = NSData(contentsOfURL: url)
-        if data != nil {
-            var responseJson : AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: nil)
-            if responseJson != nil {
-                var categoryInfos = responseJson.objectForKey("categories") as NSArray
-                var categoryName = NSMutableArray()
-                var categoryId = NSMutableArray()
-                for var i = 0; i < categoryInfos.count; i++ {
-                    var titleDictionary = categoryInfos.objectAtIndex(i) as NSDictionary
-                    var idCategory = categoryInfos.objectAtIndex(i) as NSDictionary
-                    var categoryIdString = idCategory.objectForKey("id") as NSString
-                    var changeEncoding = titleDictionary.objectForKey("title").dataUsingEncoding(NSUTF8StringEncoding)
-                    var titleCategoryString = NSString(data: changeEncoding, encoding: NSUTF8StringEncoding)
-                    var finalString = titleCategoryString.stringByReplacingOccurrencesOfString("é", withString: "é")
-                    categoryName.addObject(finalString)
-                    categoryId.addObject(categoryIdString)
+        dispatch_async(queryQ, {
+            var data : NSData? = NSData(contentsOfURL: url)
+            if data != nil {
+                var responseJson : AnyObject! = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.AllowFragments, error: nil)
+                if responseJson != nil {
+                    var categoryInfos = responseJson.objectForKey("categories") as NSArray
+                    var categoryName = NSMutableArray()
+                    var categoryIdArray = NSMutableArray()
+                    for var i = 0; i < categoryInfos.count; i++ {
+                        var titleDictionary : NSDictionary = categoryInfos.objectAtIndex(i) as NSDictionary
+                        var idCategory = categoryInfos.objectAtIndex(i) as NSDictionary
+                        var categoryId : AnyObject! = idCategory.objectForKey("id")
+                        var categoryIdString : String = "\(categoryId)"
+                        var title : NSString = titleDictionary.objectForKey("title") as NSString
+                        categoryName.addObject(title.stringByReplacingOccurrencesOfString("&amp;", withString: "&"))
+                        categoryIdArray.addObject(categoryIdString)
+                    }
+                    dispatch_async(dispatch_get_main_queue(), {
+                        category(response:NSDictionary(objects: categoryIdArray, forKeys: categoryName))
+                    })
                 }
-                category(response:NSDictionary(objects: categoryId, forKeys: categoryName))
-                categoryDic = NSDictionary(objects: categoryId, forKeys: categoryName)
+                
             }
-            
-        }
+        })
     }
     
     func search(text:String, searchResult:(result:NSArray)->()) {
         var url : NSURL = NSURL(string: "http://\(urlSite)/api/get_recent_posts/?count=20")
-        var data : NSData = NSData(contentsOfURL: url)
-        if data != nil {
-            var jsonData : AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: nil)
-            if jsonData != nil {
-                searchResult(result:jsonData.objectForKey("posts") as NSArray)
+        dispatch_async(queryQ, {
+            var data : NSData? = NSData(contentsOfURL: url)
+            if data != nil {
+                var jsonData : AnyObject! = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.AllowFragments, error: nil)
+                if jsonData != nil {
+                    dispatch_async(dispatch_get_main_queue(), {
+                        searchResult(result:jsonData.objectForKey("posts") as NSArray)
+                    })
+                }
             }
-        }
+        })
     }
     
     func getPostOfCategory(categoryId:String, post:(post:NSArray)->()) {
-        var url : NSURL = NSURL(string: "http://\(urlSite)/api/get_category/posts/?id=\(categoryId)")
-        var data = NSData(contentsOfURL: url)
-        if data != nil {
-            var jsonData : NSDictionary = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: nil) as NSDictionary
-            if jsonData != nil {
-                post(post:jsonData.objectForKey("posts") as NSArray)
+        var url : NSURL = NSURL(string: "http://\(urlSite)/api/get_category_posts/?id=\(categoryId)")
+        dispatch_async(queryQ, {
+            var data : NSData? = NSData(contentsOfURL: url)
+            if data != nil {
+                var jsonData : NSDictionary! = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.AllowFragments, error: nil) as NSDictionary
+                if jsonData != nil {
+                    dispatch_async(dispatch_get_main_queue(), {
+                        post(post:jsonData.objectForKey("posts") as NSArray)
+                    })
+                }
             }
-        }
+        })
     }
     
     func getPostWithId(postsId:NSArray, postFromId:(post:NSArray)->()) {
         var posts = NSMutableArray()
-        for var i = 0; i < postsId.count; i++ {
-            var url = NSURL(string: "http://\(urlSite)/api/get_post/?id=\(postsId.objectAtIndex(i))")
-            var data = NSData(contentsOfURL: url)
-            if data != nil {
-                var jsonData : AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: nil)
-                if jsonData != nil {
-                    posts.addObject(jsonData.objectForKey("post"))
+        dispatch_async(queryQ, {
+            for var i = 0; i < postsId.count; i++ {
+                var url = NSURL(string: "http://\(self.urlSite)/api/get_post/?id=\(postsId.objectAtIndex(i))")
+                var data : NSData? = NSData(contentsOfURL: url)
+                if data != nil {
+                    var jsonData : AnyObject! = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.AllowFragments, error: nil)
+                    if jsonData != nil {
+                        posts.addObject(jsonData.objectForKey("post")!)
+                    }
                 }
             }
-        }
-        postFromId(post:posts)
+            dispatch_async(dispatch_get_main_queue(), {
+                postFromId(post:posts)
+            })
+        })
     }
     
     func getCountOfPost(post: NSArray, count:(count:NSArray)->()) {
         var url = NSURL(string: "http://\(urlSite)/api/get_category_index")
-        var data = NSData(contentsOfURL: url)
-        if data != nil {
-            var jsonData : AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: nil)
-            if jsonData != nil {
-                var categoryInfos : NSArray = jsonData.objectForKey("categories") as NSArray
-                var countArray = NSMutableArray()
-                for var i = 0; i < categoryInfos.count; i++ {
-                    var categoryId: AnyObject! = categoryInfos.objectAtIndex(i)
-                    countArray.addObject(categoryId.objectForKey("post_count"))
+        dispatch_async(queryQ, {
+            var data : NSData? = NSData(contentsOfURL: url)
+            if data != nil {
+                var jsonData : AnyObject! = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.AllowFragments, error: nil)
+                if jsonData != nil {
+                    var categoryInfos : NSArray = jsonData.objectForKey("categories")! as NSArray
+                    var countArray = NSMutableArray()
+                    for var i = 0; i < categoryInfos.count; i++ {
+                        var categoryId: AnyObject! = categoryInfos.objectAtIndex(i)
+                        countArray.addObject(categoryId.objectForKey("post_count")!)
+                    }
+                    dispatch_async(dispatch_get_main_queue(), {
+                        count(count:countArray)
+                    })
                 }
-                count(count:countArray)
             }
-        }
+            
+        })
     }
     
     func loadMorePost(newPost:(post:NSArray)->()) {
         page++;
         var url = NSURL(string: "http://\(urlSite)/api/get_recent_posts/?page=\(page)")
-        var data = NSData(contentsOfURL: url)
-        if data != nil {
-            var jsonData : AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: nil)
-            if jsonData != nil {
-                var newPostArray : NSArray = jsonData.objectForKey("posts") as NSArray
-                newPost(post:newPostArray)
+        dispatch_async(queryQ, {
+            var data : NSData? = NSData(contentsOfURL: url)
+            if data != nil {
+                var jsonData : AnyObject! = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.AllowFragments, error: nil)
+                if jsonData != nil {
+                    var newPostArray : NSArray = jsonData.objectForKey("posts") as NSArray
+                    dispatch_async(dispatch_get_main_queue(), {
+                        newPost(post:newPostArray)
+                    })
+                }
             }
-        }
+        })
     }
     
     func loadMorePostInCategory(categoryId:String, newPost:(post:NSArray)->()) {
         categoryPage++;
         var url = NSURL(string: "http://\(urlSite)/api/get_category_posts/?id=\(categoryId)&page=\(categoryPage)")
-        var data = NSData(contentsOfURL: url)
-        if data != nil {
-            var jsonData : AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.AllowFragments, error: nil)
-            if jsonData != nil {
-                var newPostArray : NSArray = jsonData.objectForKey("posts") as NSArray
-                newPost(post:newPostArray)
+        dispatch_async(queryQ, {
+            var data : NSData? = NSData(contentsOfURL: url)
+            if data != nil {
+                var jsonData : AnyObject! = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.AllowFragments, error: nil)
+                if jsonData != nil {
+                    var newPostArray : NSArray = jsonData.objectForKey("posts") as NSArray
+                    dispatch_async(dispatch_get_main_queue(), {
+                        newPost(post:newPostArray)
+                    })
+                }
             }
-        }
+        })
+        
     }
     
 }
-
